@@ -12,6 +12,7 @@ build/
 
 .idea
 *.egg-info/
+.vscode/
 
 .DS_Store
 *.crt
