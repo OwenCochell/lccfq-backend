@@ -5,6 +5,9 @@
 # Logging settings
 log_level = "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
 
+# Calibration settings
+calibration_interval = 86400
+
 # Watchdog settings
 with_watchdog = true
 watchdog_interval = 300  # Check QPU health every 300 seconds (5 minutes)
