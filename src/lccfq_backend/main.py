@@ -50,9 +50,24 @@ def start_loop(executor: QPUExecutor, poll_interval: int = 10):
     """Start the backend service loop that monitors and executes QPU tasks."""
     logger.info("Starting LCCFQ backend main loop.")
 
+    # Grab the start time for calibration scheduling
+
+    start = time.time()
+
     while not shutdown_flag:
         try:
             if executor.is_qpu_online():
+
+                # First, determine if it's time to run a calibration task
+
+                elapsed = time.time() - start
+
+                if elapsed >= config.calibration_interval:
+                    logger.info("Calibration interval reached. Scheduling calibration task.")
+                    executor.hwman.retune()
+                    start = time.time()  # Reset the timer after scheduling calibration
+                    continue
+
                 result = executor._execute_next()
                 logger.info(f"Task(s) executed, qpu_state={executor.qpu.state}, queue_depth={len(executor.queue._queue)}")
             else:
