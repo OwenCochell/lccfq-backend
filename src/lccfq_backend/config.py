@@ -95,12 +95,20 @@ class BackendSettings(BaseSettings):
             )
         return v.upper()
 
-    @field_validator("watchdog_interval", "calibration_interval")
+    @field_validator("watchdog_interval")
     @classmethod
     def positive_interval(cls, v: int) -> int:
         """Validate interval is positive."""
         if v <= 0:
             raise ValueError(f"Interval must be positive, got {v}")
+        return v
+
+    @field_validator("calibration_interval")
+    @classmethod
+    def zero_or_positive_interval(cls, v: int) -> int:
+        """Validate interval is zero or positive (for optional intervals)."""
+        if v < 0:
+            raise ValueError(f"Interval must be zero or positive, got {v}")
         return v
 
     @field_validator("grpc_port", "hwman_port")
