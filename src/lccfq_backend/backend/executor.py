@@ -11,7 +11,7 @@ Contact: nunezco2@illinois.edu
 """
 import time
 from typing import Union, Optional, List
-from ..model.tasks import CircuitTask, TestTask, ControlTask, TaskType, TaskBase
+from ..model.tasks import CircuitTask, TestTask, ControlTask, TaskType, TaskBase, ControlType
 from ..model.results import CircuitResult, TestResult, ControlAck, TaskResult
 from .queue import QPUTaskQueue, QueueEntry
 from .fsm import QPUAbstraction, QPUEvent, QPUState
@@ -173,11 +173,11 @@ class QPUExecutor:
         t0 = time.monotonic()
 
         match task.command:
-            case "reset":
+            case ControlType.RESET:
                 self.qpu.transition(QPUEvent.RESET)
                 return ControlAck(task_id=task.task_id, status="ok", message="QPU reset")
 
-            case "retune":
+            case ControlType.RETUNE:
                 result = self.hwman.retune()
                 if result.status == HWManStatus.OK:
                     self.qpu.update_observables(result.observables)
@@ -187,7 +187,7 @@ class QPUExecutor:
                     self.qpu.transition(QPUEvent.TUNE_FAIL)
                     return ControlAck(task_id=task.task_id, status="error", message=result.message)
 
-            case "resetall":
+            case ControlType.RESETALL:
                 result = self.hwman.reset_all()
                 if result.status == HWManStatus.OK:
                     self.qpu.transition(QPUEvent.RESET)
@@ -196,7 +196,7 @@ class QPUExecutor:
                     self.qpu.transition(QPUEvent.TUNE_FAIL)
                     return ControlAck(task_id=task.task_id, status="error", message=result.message)
 
-            case "qtol":
+            case ControlType.QTOL:
                 tolerance = float(task.params[0]) if task.params else 0.98
                 max_retries = int(task.params[1]) if len(task.params) > 1 else 3
                 logger.info(f"QTol task {task.task_id}: tolerance={tolerance:.3f}, max_retries={max_retries}")
@@ -221,6 +221,9 @@ class QPUExecutor:
                     logger.error(f"QTol task {task.task_id} failed after {max_retries} retries, fidelity={fidelity:.3f} < {tolerance:.3f}, elapsed={elapsed:.3f}s")
                     self.qpu.transition(QPUEvent.TUNE_FAIL)
                     return ControlAck(task_id=task.task_id, status="error", message=f"Fidelity {fidelity:.3f} below tolerance {tolerance:.3f}")
+
+            case ControlType.CALIBRATE:
+                pass
 
             case _:
                 logger.error(f"Unknown control command: {task.command}")

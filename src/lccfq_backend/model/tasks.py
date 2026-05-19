@@ -27,6 +27,17 @@ class TaskType(str, Enum):
     CONTROL = "control"
 
 
+class ControlType(str, Enum):
+    """Control task types LCCFQ backend admits
+    """
+    RESET = "reset"
+    RESETALL = "resetall"
+    RETUNE = "retune"
+    CALIBRATE = "calibrate"
+    QTOL = "qtol"
+    UNKNOWN = "unknown"
+
+
 def generate_task_id() -> str:
     """Generate a unique task id
 
@@ -114,5 +125,5 @@ class ControlTask(TaskBase):
 
     """
     type: Literal[TaskType.CONTROL] = Field(default=TaskType.CONTROL)
-    command: str
+    command: ControlType
     params: Optional[List[int]] = Field(default_factory=list)
