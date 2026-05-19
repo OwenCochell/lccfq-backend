@@ -62,7 +62,7 @@ def start_loop(executor: QPUExecutor, poll_interval: int = 10):
 
                 elapsed = time.time() - start
 
-                if elapsed >= config.calibration_interval:
+                if config.calibration_interval > 0 and elapsed >= config.calibration_interval:
                     logger.info("Calibration interval reached. Scheduling calibration task.")
                     executor.hwman.retune()
                     start = time.time()  # Reset the timer after scheduling calibration
