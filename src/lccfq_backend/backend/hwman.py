@@ -361,6 +361,30 @@ class RealHWManClient(BaseHWManClient):
             )
         return QPUObservables(qubits=qubits)
 
+    def measure_observables(self) -> QPUObservables:
+        logger.info("Measuring observables on real QPU.")
+        response = self.client.measure_observables()
+        if response is None or not response.status:
+            raise RuntimeError("Failed to measure observables from hwman server")
+        qubits = {}
+        for qp in response.qubits:
+            idx = int(qp.qubit_id[1:]) - 1  # q01→0, q02→1
+            qubits[idx] = QubitObservable(
+                t1=qp.t1,
+                t2=qp.t2,
+                anharmonicity=qp.anharmonicity,
+                frequency=qp.frequency,
+                gate_fidelity_1q=qp.gate_fidelity_1q,
+                gate_fidelity_2q=qp.gate_fidelity_2q,
+                rx_duration=qp.rx_duration,
+                ry_duration=qp.ry_duration,
+                sqrt_iswap_duration=qp.sqrt_iswap_duration,
+                reset_duration=qp.reset_duration,
+                measurement_duration=qp.measurement_duration,
+                max_circuit_depth=qp.max_circuit_depth,
+            )
+        return QPUObservables(qubits=qubits)
+
     def retune(self) -> Tuple[HWManStatus, Optional[str], Optional[Dict[int, QubitObservable]]]:
         """
         Retune the real QPU using the hwman tuneup protocol.
