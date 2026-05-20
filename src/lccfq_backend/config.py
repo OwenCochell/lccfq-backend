@@ -32,6 +32,11 @@ class BackendSettings(BaseSettings):
         default=3600 * 24, description="Interval in seconds for periodic QPU calibration"
     )
 
+    calibration_state: Path = Field(
+        default=Path("./last_calib.state"),
+        description="Path to file where calibration state is persisted, make blank to disable",
+    )
+
     # Watchdog settings
     with_watchdog: bool = Field(
         default=True, description="Enable watchdog daemon for QPU health monitoring"
