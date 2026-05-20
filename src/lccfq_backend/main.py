@@ -54,6 +54,19 @@ def start_loop(executor: QPUExecutor, poll_interval: int = 10):
 
     start = time.time()
 
+    # Determine if the calibration state file exists
+
+    if not config.calibration_state.is_dir() and config.calibration_state.exists():
+        logger.info(f"Calibration state file found at {config.calibration_state}. Loading state.")
+        try:
+            with open(config.calibration_state, "r") as f:
+                last_calib_time = float(f.read().strip())
+                # Set the start time to the last calibration time to maintain the schedule
+                start = last_calib_time
+                logger.info(f"Loaded last calibration time: {time.ctime(last_calib_time)}")
+        except Exception as e:
+            logger.warning(f"Failed to load calibration state: {e}. Starting with current time.")
+
     while not shutdown_flag:
         try:
             if executor.is_qpu_online():
@@ -66,6 +79,18 @@ def start_loop(executor: QPUExecutor, poll_interval: int = 10):
                     logger.info("Calibration interval reached. Scheduling calibration task.")
                     executor.hwman.retune()
                     start = time.time()  # Reset the timer after scheduling calibration
+
+                    # Persist the calibration time to the state file
+
+                    if not config.calibration_state.is_dir():
+
+                        try:
+                            with open(config.calibration_state, "w") as f:
+                                f.write(str(start))
+                            logger.info(f"Calibration time saved to {config.calibration_state}.")
+                        except Exception as e:
+                            logger.warning(f"Failed to save calibration state: {e}.")
+
                     continue
 
                 result = executor._execute_next()
