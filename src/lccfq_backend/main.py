@@ -28,12 +28,11 @@ import time
 from lccfq_backend.api.grpc_server import GRPCServer
 from lccfq_backend.backend.executor import QPUExecutor, QPUQueueEmpty
 from lccfq_backend.backend.result_store import ResultStore
-from lccfq_backend.config import config
+from lccfq_backend.config import BackendSettings
 from lccfq_backend.daemon.watchdog import start_watchdog
 from lccfq_backend.utils.log import setup_logger
 
-# Set up logger with configured log level
-logger = setup_logger("lccfq.main", level=getattr(logging, config.log_level))
+logger = setup_logger("lccfq.main")
 
 # Global shutdown flag
 shutdown_flag = False
@@ -46,24 +45,18 @@ def handle_signal(signum, frame):
     shutdown_flag = True
 
 
-def start_loop(executor: QPUExecutor, poll_interval: int = 10):
+def start_loop(executor: QPUExecutor, config: BackendSettings, poll_interval: int = 10):
     """Start the backend service loop that monitors and executes QPU tasks."""
     logger.info("Starting LCCFQ backend main loop.")
 
-    # Grab the start time for calibration scheduling
-
     start = time.time()
 
-    # Determine if the calibration state file exists
-
-    if not config.calibration_state.is_dir() and config.calibration_state.exists():
-        logger.info(f"Calibration state file found at {config.calibration_state}. Loading state.")
+    if config.with_calibration:
         try:
-            with open(config.calibration_state, "r") as f:
-                last_calib_time = float(f.read().strip())
-                # Set the start time to the last calibration time to maintain the schedule
-                start = last_calib_time
-                logger.info(f"Loaded last calibration time: {time.ctime(last_calib_time)}")
+            content = config.calibration_state.read_text().strip()
+            if content:
+                start = float(content)
+                logger.info(f"Loaded last calibration time: {time.ctime(start)}")
         except Exception as e:
             logger.warning(f"Failed to load calibration state: {e}. Starting with current time.")
 
@@ -71,26 +64,15 @@ def start_loop(executor: QPUExecutor, poll_interval: int = 10):
         try:
             if executor.is_qpu_online():
 
-                # First, determine if it's time to run a calibration task
-
-                elapsed = time.time() - start
-
-                if config.calibration_interval > 0 and elapsed >= config.calibration_interval:
+                if config.with_calibration and time.time() - start >= config.calibration_interval:
                     logger.info("Calibration interval reached. Scheduling calibration task.")
                     executor.hwman.retune()
-                    start = time.time()  # Reset the timer after scheduling calibration
-
-                    # Persist the calibration time to the state file
-
-                    if not config.calibration_state.is_dir():
-
-                        try:
-                            with open(config.calibration_state, "w") as f:
-                                f.write(str(start))
-                            logger.info(f"Calibration time saved to {config.calibration_state}.")
-                        except Exception as e:
-                            logger.warning(f"Failed to save calibration state: {e}.")
-
+                    start = time.time()
+                    try:
+                        config.calibration_state.write_text(str(start))
+                        logger.info(f"Calibration time saved to {config.calibration_state}.")
+                    except Exception as e:
+                        logger.warning(f"Failed to save calibration state: {e}.")
                     continue
 
                 result = executor._execute_next()
@@ -107,11 +89,8 @@ def start_loop(executor: QPUExecutor, poll_interval: int = 10):
 
     logger.info("Backend service stopped gracefully.")
 
-def main():
-    """Starts the backend service.
-
-    All configuration is read from config.toml.
-    """
+def main(config: BackendSettings) -> None:
+    """Starts the backend service."""
     global shutdown_flag
 
     logger.info("Initializing LCCFQ backend service.")
@@ -119,15 +98,12 @@ def main():
                 f"grpc_port={config.grpc_port}, with_watchdog={config.with_watchdog}, "
                 f"watchdog_interval={config.watchdog_interval}")
 
-    # Set signal handlers from main thread only
     signal.signal(signal.SIGTERM, handle_signal)
     signal.signal(signal.SIGINT, handle_signal)
 
-    # Create result store and executor (shared between main loop and gRPC server)
     result_store = ResultStore(results_dir=config.results_dir)
-    executor = QPUExecutor(result_store=result_store)
+    executor = QPUExecutor(config=config, result_store=result_store)
 
-    # Start gRPC server in background thread if enabled in config
     grpc_server = None
     grpc_server_thread = None
     if config.with_grpc:
@@ -143,14 +119,13 @@ def main():
         grpc_server_thread = threading.Thread(target=grpc_server.serve, daemon=True)
         grpc_server_thread.start()
 
-    # Start watchdog in background thread if enabled in config
     watchdog = None
     if config.with_watchdog:
         logger.info("Launching watchdog thread.")
-        watchdog = start_watchdog(interval=config.watchdog_interval)
+        watchdog = start_watchdog(config=config, interval=config.watchdog_interval)
 
     try:
-        start_loop(executor)
+        start_loop(executor, config)
     finally:
         if watchdog:
             logger.info("Stopping watchdog thread.")
@@ -158,7 +133,3 @@ def main():
         if grpc_server:
             logger.info("Stopping gRPC server.")
             grpc_server.cleanup()
-
-
-if __name__ == "__main__":
-    main()
