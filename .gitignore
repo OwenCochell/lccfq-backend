@@ -11,6 +11,7 @@ dist/
 build/
 
 .idea
+.vscode/
 *.egg-info/
 
 .DS_Store
@@ -18,5 +19,6 @@ build/
 *.key
 
 config.toml
+last_calib.state
 
 results/

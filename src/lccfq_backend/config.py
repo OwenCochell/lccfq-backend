@@ -27,6 +27,16 @@ class BackendSettings(BaseSettings):
         default="INFO", description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
     )
 
+    # Calibration settings
+    calibration_interval: int = Field(
+        default=3600 * 24, description="Interval in seconds for periodic QPU calibration"
+    )
+
+    calibration_state: Path = Field(
+        default=Path("./last_calib.state"),
+        description="Path to file where calibration state is persisted, make blank to disable",
+    )
+
     # Watchdog settings
     with_watchdog: bool = Field(
         default=True, description="Enable watchdog daemon for QPU health monitoring"
@@ -92,10 +102,18 @@ class BackendSettings(BaseSettings):
 
     @field_validator("watchdog_interval")
     @classmethod
-    def validate_watchdog_interval(cls, v: int) -> int:
-        """Validate watchdog interval is positive."""
+    def positive_interval(cls, v: int) -> int:
+        """Validate interval is positive."""
         if v <= 0:
-            raise ValueError(f"Watchdog interval must be positive, got {v}")
+            raise ValueError(f"Interval must be positive, got {v}")
+        return v
+
+    @field_validator("calibration_interval")
+    @classmethod
+    def zero_or_positive_interval(cls, v: int) -> int:
+        """Validate interval is zero or positive (for optional intervals)."""
+        if v < 0:
+            raise ValueError(f"Interval must be zero or positive, got {v}")
         return v
 
     @field_validator("grpc_port", "hwman_port")
