@@ -186,7 +186,8 @@ class MockHWManClient(BaseHWManClient):
                 ry_duration=20.0,
                 sqrt_iswap_duration=40.0,
                 reset_duration=5.0,
-                measurement_duration=12.0
+                measurement_duration=12.0,
+                max_circuit_depth=2000 - i * 100
             ) for i in range(5)
         }
         logger.info(f"Retune complete, elapsed={time.monotonic() - t0:.3f}s")
@@ -220,7 +221,8 @@ class MockHWManClient(BaseHWManClient):
                 ry_duration=20.0,
                 sqrt_iswap_duration=40.0,
                 reset_duration=5.0,
-                measurement_duration=12.0
+                measurement_duration=12.0,
+                max_circuit_depth=2000 - i * 100
             ) for i in range(5)
         }
 
