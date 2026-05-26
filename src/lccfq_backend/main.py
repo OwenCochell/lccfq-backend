@@ -96,9 +96,14 @@ def main(config: BackendSettings) -> None:
     # Configure the user manager
 
     user_manager = UserManager()
-
     json_serializer = JSONSerialize(file_path=config.user_file)
-    json_serializer.load(user_manager)
+
+    try:
+
+        json_serializer.load(user_manager)
+
+    except Exception as e:
+        logger.warning(f"Failed to load user data: {e}. Starting with empty user manager.")
 
     result_store = ResultStore(results_dir=config.results_dir)
     executor = QPUExecutor(config=config, users=user_manager, result_store=result_store)
@@ -132,3 +137,7 @@ def main(config: BackendSettings) -> None:
         if grpc_server:
             logger.info("Stopping gRPC server.")
             grpc_server.cleanup()
+
+        # Save user data on shutdown
+
+        json_serializer.dump(user_manager)
