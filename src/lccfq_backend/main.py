@@ -101,7 +101,7 @@ def main(config: BackendSettings) -> None:
     json_serializer.load(user_manager)
 
     result_store = ResultStore(results_dir=config.results_dir)
-    executor = QPUExecutor(config=config, result_store=result_store)
+    executor = QPUExecutor(config=config, users=user_manager, result_store=result_store)
 
     grpc_server = None
     grpc_server_thread = None
