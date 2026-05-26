@@ -11,6 +11,9 @@ Contact: nunezco2@illinois.edu
 """
 import time
 from typing import Union, Optional, List
+
+from .users import UserManager
+from ..model.user import Permissions
 from ..model.tasks import CircuitTask, TestTask, ControlTask, TaskType, TaskBase
 from ..model.results import CircuitResult, TestResult, ControlAck, TaskResult
 from .queue import QPUTaskQueue, QueueEntry
@@ -27,11 +30,12 @@ logger = setup_logger("lccfq.executor")
 class QPUExecutor:
     """Representation of the QPU executor"""
 
-    def __init__(self, config: BackendSettings, result_store: Optional[ResultStore] = None):
+    def __init__(self, config: BackendSettings, users: UserManager,result_store: Optional[ResultStore] = None):
         self.qpu = QPUAbstraction()
         self.hwman = make_hwman_client(config)
         self.queue = QPUTaskQueue()
         self.result_store = result_store
+        self.users = users
 
         logger.info("QPUExecutor initialized")
 
@@ -150,6 +154,11 @@ class QPUExecutor:
             logger.info(f"Deferred task {entry.task.task_id} completed with result: {result}")
 
     def _execute_circuit(self, task: CircuitTask) -> CircuitResult:
+
+        if not self.users.check_permission(task.user, Permissions.SUBMIT_CIRCUITS):
+            # TODO: Maybe add a status field to the result to indicate permission issues vs execution errors?
+            return CircuitResult(task_id=task.task_id, distribution={}, raw_response={"error": "User does not have permission to submit circuits"})
+
         logger.debug(f"Executing CIRCUIT task {task.task_id}, gates={len(task.gates)}, shots={task.shots}")
         self.qpu.transition(QPUEvent.TASK_STARTED)
         t0 = time.monotonic()
@@ -175,10 +184,15 @@ class QPUExecutor:
 
         match task.command:
             case "reset":
+
+                if not self.users.check_permission(task.user, Permissions.RESET):
+                    return ControlAck(task_id=task.task_id, status="error", message="User does not have permission to reset the QPU")
                 self.qpu.transition(QPUEvent.RESET)
                 return ControlAck(task_id=task.task_id, status="ok", message="QPU reset")
 
             case "retune":
+                if not self.users.check_permission(task.user, Permissions.RETUNE):
+                    return ControlAck(task_id=task.task_id, status="error", message="User does not have permission to retune the QPU")
                 result = self.hwman.retune()
                 if result.status == HWManStatus.OK:
                     self.qpu.update_observables(result.observables)
@@ -189,6 +203,8 @@ class QPUExecutor:
                     return ControlAck(task_id=task.task_id, status="error", message=result.message)
 
             case "resetall":
+                if not self.users.check_permission(task.user, Permissions.RESETALL):
+                    return ControlAck(task_id=task.task_id, status="error", message="User does not have permission to perform full QPU reset")
                 result = self.hwman.reset_all()
                 if result.status == HWManStatus.OK:
                     self.qpu.transition(QPUEvent.RESET)
@@ -198,6 +214,8 @@ class QPUExecutor:
                     return ControlAck(task_id=task.task_id, status="error", message=result.message)
 
             case "qtol":
+                if not self.users.check_permission(task.user, Permissions.QTOL):
+                    return ControlAck(task_id=task.task_id, status="error", message="User does not have permission to perform QPU tolerance check")
                 tolerance = float(task.params[0]) if task.params else 0.98
                 max_retries = int(task.params[1]) if len(task.params) > 1 else 3
                 logger.info(f"QTol task {task.task_id}: tolerance={tolerance:.3f}, max_retries={max_retries}")
