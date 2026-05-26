@@ -10,15 +10,6 @@ Description:
 License: Apache 2.0
 Contact: nunezco2@illinois.edu
 """
-"""
-Filename: main.py
-Author: Santiago Nunez-Corrales
-Date: 2025-08-09
-Description:
-    Main entry point for the LCCFQ backend service.
-
-License: Apache 2.0
-"""
 
 import logging
 import signal
@@ -31,6 +22,7 @@ from lccfq_backend.backend.result_store import ResultStore
 from lccfq_backend.config import BackendSettings
 from lccfq_backend.daemon.watchdog import start_watchdog
 from lccfq_backend.utils.log import setup_logger
+from lccfq_backend.backend.users import UserManager, JSONSerialize
 
 logger = setup_logger("lccfq.main")
 
@@ -100,6 +92,13 @@ def main(config: BackendSettings) -> None:
 
     signal.signal(signal.SIGTERM, handle_signal)
     signal.signal(signal.SIGINT, handle_signal)
+
+    # Configure the user manager
+
+    user_manager = UserManager()
+
+    json_serializer = JSONSerialize(file_path=config.user_file)
+    json_serializer.load(user_manager)
 
     result_store = ResultStore(results_dir=config.results_dir)
     executor = QPUExecutor(config=config, result_store=result_store)
