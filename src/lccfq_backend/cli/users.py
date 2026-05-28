@@ -54,10 +54,8 @@ def add(name: str):
 
     try:
 
-        # TODO: User ID and permissions are hardcoded
-        user = User(id=0, name=name, perms=Permissions(0))
+        user_manager.create_user(name=name, perms=Permissions(0))
 
-        user_manager.add_user(user)
         json_serializer.dump(user_manager)
         typer.echo(f"User '{name}' added successfully.")
     except Exception as e:
