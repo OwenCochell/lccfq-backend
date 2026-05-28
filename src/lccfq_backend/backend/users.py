@@ -160,6 +160,42 @@ class UserManager:
         """
         return self.users[name]
 
+    def create_user(self, name: str, perms: Permissions = Permissions(0)) -> User:
+        """Create a new user.
+
+        :param name: The name of the user to create.
+        :param perms: The permissions for the user.
+        :return: The newly created user.
+        """
+        # TODO: Hardcoded ID
+        user = User(name=name, perms=perms, id=0)
+        self.add_user(user)
+        return user
+
+    def add_permission(self, user_name: str, permission: Permissions):
+        """Add a permission to a user.
+
+        :param user_name: The name of the user to add the permission to.
+        :param permission: The permission to add.
+        """
+        if not self.has_user(user_name):
+            raise ValueError(f"User '{user_name}' does not exist.")
+
+        user = self.get_user(user_name)
+        user.perms |= permission
+
+    def remove_permission(self, user_name: str, permission: Permissions):
+        """Remove a permission from a user.
+
+        :param user_name: The name of the user to remove the permission from.
+        :param permission: The permission to remove.
+        """
+        if not self.has_user(user_name):
+            raise ValueError(f"User '{user_name}' does not exist.")
+
+        user = self.get_user(user_name)
+        user.perms &= ~permission
+
     def check_permission(self, user_name: str, permission: Permissions) -> bool:
         """Check if a user has a specific permission.
 
