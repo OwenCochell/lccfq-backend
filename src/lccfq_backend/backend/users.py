@@ -15,6 +15,8 @@ import pathlib
 
 from abc import abstractmethod
 
+from pydantic_core import from_json
+
 from ..model.user import User, Group, Permissions
 
 
@@ -65,22 +67,16 @@ class JSONSerialize(BaseSerialize):
 
         :param users: The user manager containing the users to dump.
         """
+
+        # Use the pydantic model's built in JSON serialization for users, and a custom serialization for groups
+
         data = {
             'groups': [
-                {
-                    'id': group.id,
-                    'name': group.name,
-                    'perms': group.perms.value
-                }
+                group.model_dump()
                 for group in users.groups.values()
             ],
             'users': [
-                {
-                    'id': user.id,
-                    'name': user.name,
-                    'perms': user.perms.value,
-                    'groups': [group.name for group in user.groups]
-                }
+                user.model_dump()
                 for user in users.users.values()
             ]
         }
@@ -102,23 +98,14 @@ class JSONSerialize(BaseSerialize):
         # Load each group first
 
         for group_data in data.get('groups', []):
-            group = Group(
-                id=group_data['id'],
-                name=group_data['name'],
-                perms=group_data['perms']
-            )
+            group = Group.model_validate(group_data)
             users.groups[group.name] = group
 
         # Load each user and their respective groups
 
         for user_data in data.get('users', []):
             user_groups = [users.groups[group_name] for group_name in user_data.get('groups', [])]
-            user = User(
-                id=user_data['id'],
-                name=user_data['name'],
-                perms=user_data['perms'],
-                groups=user_groups
-            )
+            user = User.model_validate(user_data, context={'groups': user_groups})
             users.users[user.name] = user
 
 
