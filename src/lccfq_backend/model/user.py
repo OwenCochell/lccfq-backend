@@ -10,12 +10,12 @@ License: Apache 2.0
 Contact: cochell2@illinois.edu
 """
 
-from enum import Flag, auto
+from enum import auto, IntFlag
 
 from pydantic import BaseModel, Field
 
 
-class Permissions(Flag):
+class Permissions(IntFlag):
     """Permissions that a user can have.
     """
 
