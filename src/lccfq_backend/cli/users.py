@@ -109,11 +109,9 @@ def add_perms(name: str, perms: Annotated[list[Permissions], typer.Option()]):
 
     user_manager, json_serializer = init_users(config_file="config.toml")
 
-    # Get the user from the manager
+    # Does the user exist?
 
-    user = user_manager.get_user(name)
-
-    if not user:
+    if not user_manager.has_user(name):
         typer.echo(f"User '{name}' not found.", err=True)
         raise typer.Exit(1)
 
@@ -121,8 +119,8 @@ def add_perms(name: str, perms: Annotated[list[Permissions], typer.Option()]):
 
     for perm_name in perms:
         try:
-            perm = Permissions(perm_name)
-            user.perms |= perm
+
+            user_manager.add_permission(name, Permissions(perm_name))
         except KeyError:
             typer.echo(f"Permission '{perm_name}' not found.", err=True)
             raise typer.Exit(1)
