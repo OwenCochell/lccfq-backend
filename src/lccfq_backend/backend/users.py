@@ -13,66 +13,7 @@ from __future__ import annotations
 import json
 import pathlib
 
-from abc import abstractmethod
-
-from pydantic_core import from_json
-
 from ..model.user import User, Group, Permissions
-
-
-class JSONSerialize():
-    """
-    A simple JSON serializer for loading/saving user data.
-    """
-
-    def __init__(self, file_path: pathlib.Path):
-        self.file_path = file_path
-
-    def dump(self, users: UserManager):
-        """Dump user information to JSON.
-
-        :param users: The user manager containing the users to dump.
-        """
-
-        # Use the pydantic model's built in JSON serialization for users, and a custom serialization for groups
-
-        data = {
-            'groups': [
-                group.model_dump()
-                for group in users.groups.values()
-            ],
-            'users': [
-                user.model_dump()
-                for user in users.users.values()
-            ]
-        }
-
-        with open(self.file_path, 'w') as f:
-            json.dump(data, f, indent=4)
-
-    def load(self, users: UserManager):
-        """Load user and group information from JSON.
-
-        :param users: The user manager containing the users to load.
-        """
-        
-        # Load the JSON data from the file
-
-        with open(self.file_path, 'r') as f:
-            data = json.load(f)
-
-        # Load each group first
-
-        for group_data in data.get('groups', []):
-            group = Group.model_validate(group_data)
-            users.groups[group.name] = group
-
-        # Load each user and their respective groups
-
-        for user_data in data.get('users', []):
-            user_groups = [users.groups[group_name] for group_name in user_data.get('groups', [])]
-            user = User.model_validate(user_data, context={'groups': user_groups})
-            users.users[user.name] = user
 
 
 class UserManager:
@@ -89,6 +30,51 @@ class UserManager:
 
         self.users: dict[str, User] = {}  # Collection of users
         self.groups: dict[str, Group] = {}  # Collection of groups
+
+    def load_to_file(self, file_path: pathlib.Path):
+        """Save user information to a JSON file.
+
+        :param file_path: The path to the JSON file to save user information to.
+        """
+
+        # Use the pydantic model's built in JSON serialization for users, and a custom serialization for groups
+
+        data = {
+            'groups': [
+                group.model_dump()
+                for group in self.groups.values()
+            ],
+            'users': [
+                user.model_dump()
+                for user in self.users.values()
+            ]
+        }
+
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=4)
+
+    def load_from_file(self, file_path: pathlib.Path):
+        """Load user information from a JSON file.
+
+        :param file_path: The path to the JSON file containing user information.
+        """
+        # Load the JSON data from the file
+
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+
+        # Load each group first
+
+        for group_data in data.get('groups', []):
+            group = Group.model_validate(group_data)
+            self.groups[group.name] = group
+
+        # Load each user and their respective groups
+
+        for user_data in data.get('users', []):
+            user_groups = [self.groups[group_name] for group_name in user_data.get('groups', [])]
+            user = User.model_validate(user_data, context={'groups': user_groups})
+            self.users[user.name] = user
 
     def add_user(self, user: User):
         """Add a user to the system.
