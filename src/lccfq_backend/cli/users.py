@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Annotated
 
 from lccfq_backend.config import BackendSettings
-from lccfq_backend.backend.users import UserManager, JSONSerialize
-from lccfq_backend.model.user import User, Permissions
+from lccfq_backend.backend.users import UserManager
+from lccfq_backend.model.user import Permissions
 
 user_app = typer.Typer(
     name="user",
@@ -34,29 +34,29 @@ def init_users(config_file: str):
     # Create and load the user manager
 
     user_manager = UserManager()
-    json_serializer = JSONSerialize(file_path=config.user_file)
 
     try:
 
-        json_serializer.load(user_manager)
+        user_manager.load_from_file(config.user_file)
 
     except Exception as e:
         typer.echo(f"Failed to load user data: {e}. Starting with empty user manager.", err=True)
     
-    return user_manager, json_serializer
+    return user_manager, config
 
 @user_app.command()
 def add(name: str):
     """Add a new user with the given name.
     """
 
-    user_manager, json_serializer = init_users(config_file="config.toml")
+    user_manager, config = init_users(config_file="config.toml")
 
     try:
 
         user_manager.create_user(name=name, perms=Permissions(0))
 
-        json_serializer.dump(user_manager)
+        user_manager.load_to_file(config.user_file)
+
         typer.echo(f"User '{name}' added successfully.")
     except Exception as e:
         typer.echo(f"Error adding user: {e}", err=True)
@@ -107,7 +107,7 @@ def add_perms(name: str, perms: Annotated[list[Permissions], typer.Option()]):
     """Add permissions to a user.
     """
 
-    user_manager, json_serializer = init_users(config_file="config.toml")
+    user_manager, config = init_users(config_file="config.toml")
 
     # Does the user exist?
 
@@ -127,5 +127,6 @@ def add_perms(name: str, perms: Annotated[list[Permissions], typer.Option()]):
 
     # Save the updated user manager
 
-    json_serializer.dump(user_manager)
+    user_manager.load_to_file(config.user_file)
+
     typer.echo(f"Permissions {perms} added to user '{name}' successfully.")

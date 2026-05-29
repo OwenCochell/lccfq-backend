@@ -22,7 +22,7 @@ from lccfq_backend.backend.result_store import ResultStore
 from lccfq_backend.config import BackendSettings
 from lccfq_backend.daemon.watchdog import start_watchdog
 from lccfq_backend.utils.log import setup_logger
-from lccfq_backend.backend.users import UserManager, JSONSerialize
+from lccfq_backend.backend.users import UserManager
 
 logger = setup_logger("lccfq.main")
 
@@ -96,11 +96,10 @@ def main(config: BackendSettings) -> None:
     # Configure the user manager
 
     user_manager = UserManager()
-    json_serializer = JSONSerialize(file_path=config.user_file)
 
     try:
 
-        json_serializer.load(user_manager)
+        user_manager.load_from_file(config.user_file)
 
     except Exception as e:
         logger.warning(f"Failed to load user data: {e}. Starting with empty user manager.")
@@ -140,4 +139,4 @@ def main(config: BackendSettings) -> None:
 
         # Save user data on shutdown
 
-        json_serializer.dump(user_manager)
+        user_manager.load_to_file(config.user_file)
