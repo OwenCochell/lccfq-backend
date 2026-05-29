@@ -20,41 +20,7 @@ from pydantic_core import from_json
 from ..model.user import User, Group, Permissions
 
 
-class BaseSerialize():
-    """
-    Base class for serializing and unserializing user information.
-
-    'Serializing' is the process of converting user information
-    into a format that can be stored and read later.
-    This can range from persistent files to complex databases.
-
-    This class defines the interface for serializers,
-    which are intended to be lightweight and easily extendable to different storage formats.
-    
-    TODO:
-    As of now we do not preform 'live' serialization, meaning that changes to user information are not automatically saved.
-    Any changes to the user structure must be manually saved/loaded,
-    which might not work with a live system like LDAP.
-    """
-
-    @abstractmethod
-    def load(self, users: UserManager):
-        """Serialize user information.
-
-        :param users: The user manager containing the users to serialize.
-        """
-        raise NotImplementedError("This method should be implemented by subclasses.")
-
-    @abstractmethod
-    def dump(self, users: UserManager):
-        """Unserialize user and group information.
-
-        :param man: The user manager to populate with unserialized data.
-        """
-        raise NotImplementedError("This method should be implemented by subclasses.")
-
-
-class JSONSerialize(BaseSerialize):
+class JSONSerialize():
     """
     A simple JSON serializer for loading/saving user data.
     """
