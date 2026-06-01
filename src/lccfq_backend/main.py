@@ -10,15 +10,6 @@ Description:
 License: Apache 2.0
 Contact: nunezco2@illinois.edu
 """
-"""
-Filename: main.py
-Author: Santiago Nunez-Corrales
-Date: 2025-08-09
-Description:
-    Main entry point for the LCCFQ backend service.
-
-License: Apache 2.0
-"""
 
 import logging
 import signal
@@ -31,6 +22,7 @@ from lccfq_backend.backend.result_store import ResultStore
 from lccfq_backend.config import BackendSettings
 from lccfq_backend.daemon.watchdog import start_watchdog
 from lccfq_backend.utils.log import setup_logger
+from lccfq_backend.backend.users import UserManager
 
 logger = setup_logger("lccfq.main")
 
@@ -101,8 +93,19 @@ def main(config: BackendSettings) -> None:
     signal.signal(signal.SIGTERM, handle_signal)
     signal.signal(signal.SIGINT, handle_signal)
 
+    # Configure the user manager
+
+    user_manager = UserManager()
+
+    try:
+
+        user_manager.load_from_file(config.user_file)
+
+    except Exception as e:
+        logger.warning(f"Failed to load user data: {e}. Starting with empty user manager.")
+
     result_store = ResultStore(results_dir=config.results_dir)
-    executor = QPUExecutor(config=config, result_store=result_store)
+    executor = QPUExecutor(config=config, users=user_manager, result_store=result_store)
 
     grpc_server = None
     grpc_server_thread = None
@@ -133,3 +136,7 @@ def main(config: BackendSettings) -> None:
         if grpc_server:
             logger.info("Stopping gRPC server.")
             grpc_server.cleanup()
+
+        # Save user data on shutdown
+
+        user_manager.load_to_file(config.user_file)

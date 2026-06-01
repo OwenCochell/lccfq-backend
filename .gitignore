@@ -20,5 +20,6 @@ build/
 
 config.toml
 last_calib.state
+users.json
 
 results/

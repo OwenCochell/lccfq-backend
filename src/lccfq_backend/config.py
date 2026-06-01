@@ -27,6 +27,11 @@ class BackendSettings(BaseSettings):
         default="INFO", description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
     )
 
+    user_file: Path = Field(
+        default=Path("./users.json"),
+        description="Path to JSON file for user and group information",
+    )
+
     # Calibration settings
     with_calibration: bool = Field(
         default=True, description="Enable periodic QPU calibration"

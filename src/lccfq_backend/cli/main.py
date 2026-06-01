@@ -13,6 +13,8 @@ from lccfq_backend.config import BackendSettings
 from lccfq_backend.main import main as run_backend
 from lccfq_backend.utils.log import setup_logger
 
+from .users import user_app
+
 app = typer.Typer(
     name="backend",
     help="LCCFQ Backend CLI",
@@ -207,7 +209,7 @@ def _display_certificate_info(cert_file: Path) -> None:
 
 
 app.add_typer(cert_app, name="cert")
-
+app.add_typer(user_app, name="users")
 
 def main() -> None:
     app()
